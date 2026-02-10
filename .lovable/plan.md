@@ -1,56 +1,54 @@
 
 
-# Pagamento Dividido (Split Payment)
+# Agenda com Intervalos de 15 Minutos + Filtro de Horario
 
 ## O que muda para voce
-Ao finalizar um atendimento, voce podera dividir o pagamento em 2 formas diferentes, com valores livres. Exemplos:
-- R$ 20 em dinheiro + R$ 45 no PIX = R$ 65
-- R$ 30 no debito + R$ 35 no credito = R$ 65
-- Qualquer combinacao, desde que a soma bata com o total
+- Os horarios da agenda passam a ser exibidos de **15 em 15 minutos** (07:00, 07:15, 07:30, 07:45, 08:00...)
+- O intervalo total vai das **07:00 ate as 23:00**
+- Um novo botao na barra de ferramentas permite alternar entre **"Todos os horarios"** (7h-23h) e **"Somente horario comercial"** (apenas quando a barbearia esta aberta)
 
-## Como vai funcionar na tela
-1. O modal de pagamento atual continua igual para pagamento com 1 metodo
-2. Um botao "Dividir Pagamento" aparece abaixo dos metodos
-3. Ao ativar, aparecem 2 linhas:
-   - Linha 1: escolha do metodo + campo para digitar o valor (ex: Dinheiro - R$ 20,00)
-   - Linha 2: escolha do metodo + valor restante calculado automaticamente (ex: PIX - R$ 45,00)
-   - Voce pode editar qualquer um dos valores livremente
-4. Validacao: os dois valores precisam ser maiores que zero e a soma deve ser igual ao total
-5. Na tabela de transacoes, aparecerao 2 etiquetas lado a lado mostrando cada forma e valor
-
-## Restricoes
-- Cortesia e fidelidade nao podem ser divididos
-- Os dois metodos devem ser diferentes entre si
+## Como vai funcionar
+1. Cada linha do calendario representa 15 minutos em vez de 1 hora
+2. O label de horario aparece a cada 15 min: 07:00, 07:15, 07:30, 07:45, 08:00...
+3. A altura de cada slot sera menor para caber mais linhas na tela
+4. Um botao com icone de relogio no CalendarHeader alterna entre mostrar todos os horarios ou apenas o horario de funcionamento
+5. Agendamentos continuam sendo posicionados no slot correto baseado no horario de inicio
 
 ---
 
 ## Detalhes Tecnicos
 
-### Armazenamento
-Sem mudanca no banco de dados. O campo `payment_method` (string) armazena o formato:
-- Pagamento simples: `"pix"`
-- Pagamento dividido: `"cash:20.00|pix:45.00"`
-
 ### Arquivos alterados
 
-**1. `src/components/financeiro/PaymentMethodModal.tsx`**
-- Adicionar toggle "Dividir Pagamento"
-- Estados: `isSplit`, `splitMethod1`, `splitMethod2`, `splitAmount1`, `splitAmount2`
-- Dois seletores de metodo + dois campos Input (type number, step 0.01)
-- Ao digitar valor no campo 1, campo 2 calcula `total - valor1` automaticamente (editavel)
-- Validacao: soma == total, ambos > 0, metodos diferentes
-- `onConfirm` envia `"method1:amount1|method2:amount2"` quando split ativo
+**1. `src/components/agenda/CalendarWeekView.tsx`**
+- Trocar geracao do array `HOURS` para gerar slots de 15 em 15 min (objetos `{ hour, minute }`)
+- Range padrao: 7:00 ate 22:45 (totalizando 64 slots)
+- Modo "somente horario comercial": filtra slots para mostrar apenas dentro do horario de abertura/fechamento
+- Ajustar `DEFAULT_HOUR_HEIGHT` para ~24px por slot de 15 min (em vez de 80px por hora)
+- Atualizar mapeamento de appointments para considerar hora + minuto
+- Atualizar labels para mostrar HH:MM a cada slot
+- Ajustar posicao do indicador de horario atual
 
-**2. `src/components/financeiro/PaymentMethodModal.tsx` (PaymentBadge)**
-- Detectar `|` na string para identificar split
-- Renderizar 2 badges com metodo + valor formatado
+**2. `src/components/agenda/CalendarDayView.tsx`**
+- Mesmas mudancas: slots de 15 min, range 7-23h
+- Atualizar `HOURS` para array de `{ hour, minute }`
+- Ajustar altura dos slots e mapeamento de agendamentos
+- Atualizar labels e indicador de horario
 
-**3. `src/components/financeiro/CashFlowTab.tsx`**
-- Atualizar calculo de `paymentBreakdown` para parsear formato split e distribuir valores corretamente entre os metodos
+**3. `src/components/agenda/CalendarHeader.tsx`**
+- Adicionar nova prop `showBusinessHoursOnly` + `onToggleBusinessHours`
+- Novo botao com icone `Clock` para alternar entre "Todos os horarios" e "Horario comercial"
+- Tooltip explicando o estado atual
 
-**4. `src/components/financeiro/TransactionsTable.tsx`**
-- Nenhuma mudanca estrutural -- ja usa PaymentBadge
+**4. `src/pages/Agenda.tsx`**
+- Adicionar estado `showBusinessHoursOnly` (salvo no localStorage)
+- Passar novas props para CalendarHeader, CalendarWeekView e CalendarDayView
 
-**5. `src/components/financeiro/CommissionReportTab.tsx`**
-- Atualizar agrupamento por metodo para parsear formato split
+### Logica de mapeamento de agendamentos
+- Cada agendamento sera posicionado no slot de 15 min mais proximo (ex: agendamento as 10:20 vai no slot 10:15)
+- A chave do mapeamento muda de `hour` para `hour:minute` (ex: "10:15")
 
+### Impacto visual
+- Com 64 slots (7h-23h), a agenda tera scroll vertical significativo no modo "todos os horarios"
+- No modo "horario comercial" (ex: 9h-19h = 40 slots), sera mais compacto
+- O modo compacto existente continuara funcionando, ajustando a altura dos slots para caber na tela
