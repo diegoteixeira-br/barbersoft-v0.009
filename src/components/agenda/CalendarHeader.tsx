@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Plus, Calendar, Zap, RefreshCw, Tv, Maximize2, Minimize2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Calendar, Zap, RefreshCw, Tv, Maximize2, Minimize2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
