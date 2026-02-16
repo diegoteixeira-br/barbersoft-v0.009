@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
         // Buscar dados da unidade (incluindo WhatsApp)
         const { data: unit, error: unitError } = await supabase
           .from("units")
-          .select("id, name, evolution_instance_name, evolution_api_key")
+          .select("id, name, evolution_instance_name, evolution_api_key, timezone")
           .eq("id", unitId)
           .single();
 
@@ -250,10 +250,20 @@ Deno.serve(async (req) => {
             }
           }
 
-          // Formatar mensagem
+          // Formatar mensagem usando timezone da unidade
           const startTime = new Date(appointment.start_time);
           const barberName = barberMap.get(appointment.barber_id) || "Profissional";
           const serviceName = serviceMap.get(appointment.service_id) || "Serviço";
+          const unitTimezone = unit.timezone || 'America/Sao_Paulo';
+
+          const formattedTime = startTime.toLocaleTimeString("pt-BR", { 
+            hour: "2-digit", 
+            minute: "2-digit", 
+            timeZone: unitTimezone 
+          });
+          const formattedDate = startTime.toLocaleDateString("pt-BR", { 
+            timeZone: unitTimezone 
+          });
 
           let message = settings.appointment_reminder_template || 
             "Olá {{nome}}! Lembrete: você tem um agendamento às {{horario}} com {{profissional}}. Serviço: {{servico}}. Te esperamos!";
@@ -261,10 +271,10 @@ Deno.serve(async (req) => {
           message = message
             .replace(/\{\{nome\}\}/gi, appointment.client_name || "Cliente")
             .replace(/\{\{name\}\}/gi, appointment.client_name || "Cliente")
-            .replace(/\{\{data\}\}/gi, startTime.toLocaleDateString("pt-BR"))
-            .replace(/\{\{date\}\}/gi, startTime.toLocaleDateString("pt-BR"))
-            .replace(/\{\{horario\}\}/gi, startTime.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }))
-            .replace(/\{\{hora\}\}/gi, startTime.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }))
+            .replace(/\{\{data\}\}/gi, formattedDate)
+            .replace(/\{\{date\}\}/gi, formattedDate)
+            .replace(/\{\{horario\}\}/gi, formattedTime)
+            .replace(/\{\{hora\}\}/gi, formattedTime)
             .replace(/\{\{profissional\}\}/gi, barberName)
             .replace(/\{\{barber\}\}/gi, barberName)
             .replace(/\{\{servico\}\}/gi, serviceName)
