@@ -107,11 +107,24 @@ serve(async (req) => {
     }
 
     const articleUrl = `${SITE_URL}/blog/${post.slug}`;
+    const shareUrl = `${SITE_URL}/share/blog/${post.slug}`;
     const fullTitle = `${post.title} | ${SITE_NAME}`;
     const imageUrl = post.image || FALLBACK_IMAGE;
 
     console.log('Generating HTML for post:', post.title);
     console.log('Image URL:', imageUrl);
+
+    // Detect if request is from a crawler (Facebook, WhatsApp, etc.)
+    const userAgent = (req.headers.get('user-agent') || '').toLowerCase();
+    const isCrawler = /facebookexternalhit|facebot|whatsapp|twitterbot|linkedinbot|telegrambot|slackbot|discordbot|bot|crawler|spider|preview/i.test(userAgent);
+
+    // For real users (not crawlers), redirect immediately
+    if (!isCrawler) {
+      return new Response(null, {
+        status: 302,
+        headers: { ...corsHeaders, 'Location': articleUrl },
+      });
+    }
 
     const html = `<!DOCTYPE html>
 <html lang="pt-BR" prefix="og: https://ogp.me/ns#">
@@ -124,7 +137,7 @@ serve(async (req) => {
   <meta name="description" content="${post.excerpt}">
   
   <meta property="og:type" content="article">
-  <meta property="og:url" content="${articleUrl}">
+  <meta property="og:url" content="${shareUrl}">
   <meta property="og:title" content="${post.title}">
   <meta property="og:description" content="${post.excerpt}">
   <meta property="og:image" content="${imageUrl}">
@@ -138,12 +151,10 @@ serve(async (req) => {
   <meta property="og:locale" content="pt_BR">
   
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:url" content="${articleUrl}">
+  <meta name="twitter:url" content="${shareUrl}">
   <meta name="twitter:title" content="${post.title}">
   <meta name="twitter:description" content="${post.excerpt}">
   <meta name="twitter:image" content="${imageUrl}">
-  
-  <meta http-equiv="refresh" content="0;url=${articleUrl}">
   
   <style>
     body {
