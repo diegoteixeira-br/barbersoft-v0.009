@@ -8,7 +8,8 @@ import { useUnitEvolutionWhatsApp } from "@/hooks/useUnitEvolutionWhatsApp";
 interface UnitWhatsAppIntegrationProps {
   unit: Unit;
   onConnectionChange?: () => void;
-  autoConnect?: boolean; // New prop to auto-start connection
+  autoConnect?: boolean;
+  onClose?: () => void;
 }
 
 export interface UnitWhatsAppIntegrationRef {
@@ -16,7 +17,7 @@ export interface UnitWhatsAppIntegrationRef {
 }
 
 export const UnitWhatsAppIntegration = forwardRef<UnitWhatsAppIntegrationRef, UnitWhatsAppIntegrationProps>(
-  ({ unit, onConnectionChange, autoConnect = false }, ref) => {
+  ({ unit, onConnectionChange, autoConnect = false, onClose }, ref) => {
     const {
       connectionState,
       qrCode,
@@ -129,6 +130,12 @@ export const UnitWhatsAppIntegration = forwardRef<UnitWhatsAppIntegrationRef, Un
       onConnectionChange?.();
     };
 
+    const handleCancelConnection = async () => {
+      await cleanup();
+      onConnectionChange?.();
+      onClose?.();
+    };
+
     const renderStatusBadge = () => {
       switch (connectionState) {
         case "open":
@@ -225,7 +232,7 @@ export const UnitWhatsAppIntegration = forwardRef<UnitWhatsAppIntegrationRef, Un
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={handleDisconnect}
+                    onClick={handleCancelConnection}
                     disabled={isLoading}
                     className="gap-2 w-full"
                   >
@@ -253,7 +260,7 @@ export const UnitWhatsAppIntegration = forwardRef<UnitWhatsAppIntegrationRef, Un
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={handleDisconnect}
+                        onClick={handleCancelConnection}
                         disabled={isLoading}
                         className="gap-2 w-full"
                       >
@@ -268,7 +275,7 @@ export const UnitWhatsAppIntegration = forwardRef<UnitWhatsAppIntegrationRef, Un
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={handleDisconnect}
+                      onClick={handleCancelConnection}
                       disabled={isLoading}
                       className="gap-2 w-full max-w-xs"
                     >

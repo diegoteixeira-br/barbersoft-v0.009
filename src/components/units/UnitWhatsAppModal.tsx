@@ -39,6 +39,7 @@ export function UnitWhatsAppModal({ open, onClose, unit, onConnectionChange }: U
           unit={unit} 
           onConnectionChange={onConnectionChange}
           autoConnect={true}
+          onClose={onClose}
         />
       </DialogContent>
     </Dialog>
