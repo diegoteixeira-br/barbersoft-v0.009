@@ -5,6 +5,10 @@
   # Proxy PHP local para preview de compartilhamento do blog
   RewriteRule ^share/blog/(.+)$ share.php?slug=$1 [L,QSA]
 
+  # Redirecionar crawlers de /blog/{slug} para share.php (para OG tags corretas)
+  RewriteCond %{HTTP_USER_AGENT} facebookexternalhit|facebot|whatsapp|twitterbot|linkedinbot|telegrambot|slackbot|discordbot|bot|crawler|spider|preview [NC]
+  RewriteRule ^blog/([a-zA-Z0-9_-]+)$ share.php?slug=$1 [L,QSA]
+
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
