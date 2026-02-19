@@ -41,7 +41,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           {
             role: "system",
@@ -59,6 +59,8 @@ Responda APENAS com o título, sem aspas, sem explicações, sem pontuação fin
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error("AI gateway error:", response.status, errorText);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns segundos." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -69,7 +71,7 @@ Responda APENAS com o título, sem aspas, sem explicações, sem pontuação fin
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error("Erro ao gerar título");
+      throw new Error(`Erro ao gerar título: ${response.status}`);
     }
 
     const data = await response.json();
