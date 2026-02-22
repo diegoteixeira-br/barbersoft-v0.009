@@ -1,76 +1,44 @@
 
-# Guia Pos-Cadastro e Orientacao ao Usuario
 
-## Problema
-Apos o cadastro, o usuario nao recebe nenhuma orientacao sobre:
-1. Que precisa confirmar o email (fica perdido se nao for direto ao checkout)
-2. Como contratar/trocar de plano
-3. Como cancelar a assinatura
+# Mostrar Status de Confirmacao de Email no Painel Admin
 
-## Solucao
+## O que sera feito
+Adicionar uma coluna "Email" na tabela de barbearias do admin que mostra se o dono da conta confirmou o email ou nao, com um indicador visual (icone verde = confirmado, icone amarelo = pendente).
 
-### 1. Tela de "Verifique seu Email" apos o cadastro
-Criar uma nova pagina `/email-confirmacao` que sera exibida apos o signup, informando o usuario que ele precisa verificar o email antes de continuar. Essa tela aparece entre o cadastro e o checkout (ou quando o checkout falha).
+## Mudancas
 
-**Conteudo da tela:**
-- Icone de email animado
-- Mensagem: "Verifique sua caixa de entrada"
-- Instrucao: "Enviamos um email para **seu@email.com**. Clique no link para confirmar sua conta."
-- Dica: "Nao encontrou? Verifique a pasta de spam"
-- Botao "Reenviar email"
-- Botao "Ja confirmei, ir para o painel"
+### 1. Edge Function `get-company-owners`
+A funcao ja busca os dados do usuario via `supabaseAdmin.auth.admin.getUserById()`. O objeto retornado inclui `email_confirmed_at`. Vamos retornar essa informacao junto com os emails.
 
-### 2. Banner de Onboarding no Dashboard
-Adicionar um card de boas-vindas no topo do Dashboard (primeira vez) com 3 passos visuais:
+Retorno atual: `{ ownerEmails: { "user_id": "email" } }`
+Retorno novo: `{ ownerEmails: { "user_id": "email" }, emailConfirmed: { "user_id": true/false } }`
 
-```text
-+---------------------------------------------------+
-|  Bem-vindo ao BarberSoft! Complete sua conta:      |
-|                                                    |
-|  [1] Confirmar email  (check ou pendente)          |
-|  [2] Escolher plano   -> link /assinatura          |
-|  [3] Configurar       -> link /configuracoes      |
-+---------------------------------------------------+
-```
+### 2. Hook `useAdminCompanies`
+- Adicionar campo `email_confirmed` ao tipo `AdminCompany`
+- Mapear o novo dado `emailConfirmed` da edge function para cada company
 
-O card sera exibido enquanto o usuario estiver em trial e pode ser dispensado.
-
-### 3. Melhorias na pagina de Assinatura
-Adicionar secao "Como funciona?" na pagina `/assinatura` com um guia visual explicando:
-- Como contratar: escolher plano, preencher dados de pagamento
-- Como trocar de plano: acessar "Gerenciar" no portal Stripe
-- Como cancelar: clicar em "Cancelar Assinatura", confirmar no portal
-- Garantia de 30 dias
+### 3. Tabela `CompaniesTable`
+- Ao lado do email do dono, exibir um icone indicando se o email foi confirmado:
+  - Icone verde (check) = email confirmado
+  - Icone amarelo (relogio) = pendente de confirmacao
+- Tooltip explicativo ao passar o mouse
 
 ---
 
 ## Detalhes Tecnicos
 
-### Arquivos a criar
-- `src/pages/EmailConfirmacao.tsx` - Pagina pos-cadastro com instrucoes de confirmacao de email e botao de reenvio
+### Arquivo: `supabase/functions/get-company-owners/index.ts`
+- No loop que busca `getUserById`, tambem guardar `email_confirmed_at` em um mapa `emailConfirmed`
+- Retornar `{ ownerEmails, emailConfirmed }` onde `emailConfirmed[ownerId] = !!userData.user.email_confirmed_at`
 
-### Arquivos a modificar
-- `src/pages/Auth.tsx` - Apos signup, redirecionar para `/email-confirmacao` em vez de ir direto ao checkout (o checkout sera iniciado apos confirmacao ou via pagina de assinatura)
-- `src/App.tsx` - Adicionar rota `/email-confirmacao`
-- `src/pages/Dashboard.tsx` - Adicionar card de onboarding para usuarios em trial com os 3 passos
-- `src/pages/Assinatura.tsx` - Adicionar secao "Como funciona?" com guia visual de contratacao/troca/cancelamento
+### Arquivo: `src/hooks/useAdminCompanies.ts`
+- Adicionar `email_confirmed?: boolean` na interface `AdminCompany`
+- Na queryFn, ler `response.data?.emailConfirmed` e mapear para cada company
 
-### Fluxo atualizado
+### Arquivo: `src/components/admin/CompaniesTable.tsx`
+- Ao lado do email (linha 166), adicionar icone condicional baseado em `company.email_confirmed`
+- Usar `CheckCircle` (verde) ou `Clock` (amarelo) com tooltip
 
-```text
-Signup -> Cria conta + company (trial)
-       -> Redireciona ao Checkout Stripe
-       -> Mostra pagina "Verifique seu Email" (novo)
-       
-Dashboard (trial) -> Mostra card de onboarding com passos
-                   -> Link direto para Assinatura
+### Redeploy
+A edge function `get-company-owners` precisara ser redeployada apos a alteracao.
 
-Assinatura -> Secao "Como funciona" com passo a passo
-           -> Botoes de acao claros (contratar, gerenciar, cancelar)
-```
-
-### Notas
-- O fluxo de checkout continua funcionando como antes (signup -> checkout Stripe)
-- A pagina de email-confirmacao serve como fallback quando o checkout falha e como orientacao geral
-- O card de onboarding no dashboard sera dismissivel (salvo em localStorage)
-- A secao "Como funciona" na assinatura e sempre visivel para todos os usuarios
